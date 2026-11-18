@@ -15,6 +15,7 @@ import {
   BarChart2,
   Clock,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'motion/react';
@@ -44,6 +45,8 @@ export function TaDashboard({ taToken, onUnauthorized, onLogout }: TaDashboardPr
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<TaStudentRecord | null>(null);
+  const [deletingStudent, setDeletingStudent] = useState(false);
 
   // Question-by-question analytics
   const [selectedQuestionId, setSelectedQuestionId] = useState<string>(POLL_QUESTIONS[0].id);
@@ -210,6 +213,36 @@ export function TaDashboard({ taToken, onUnauthorized, onLogout }: TaDashboardPr
       setError('Network error while updating session.');
     } finally {
       setActionBusy(false);
+    }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!studentToDelete || deletingStudent) return;
+    const studentId = studentToDelete.id;
+    setDeletingStudent(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/ta/students/${encodeURIComponent(studentId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${taToken}` },
+        cache: 'no-store',
+      });
+      if (res.status === 401) {
+        onUnauthorized();
+        return;
+      }
+      if (!res.ok) {
+        const details = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(details?.error || 'Failed to remove student. Please try again.');
+        return;
+      }
+      setStudentToDelete(null);
+      if (selectedStudentId === studentId) setSelectedStudentId(null);
+      await fetchOverview();
+    } catch {
+      setError('Network error while removing student. Please try again.');
+    } finally {
+      setDeletingStudent(false);
     }
   };
 
@@ -544,6 +577,7 @@ export function TaDashboard({ taToken, onUnauthorized, onLogout }: TaDashboardPr
                         <th className="px-5 py-3.5">Status</th>
                         <th className="px-5 py-3.5 text-right">Progress</th>
                         <th className="px-5 py-3.5 text-right">Joined</th>
+                        <th className="px-5 py-3.5 text-right">Remove</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -586,6 +620,20 @@ export function TaDashboard({ taToken, onUnauthorized, onLogout }: TaDashboardPr
                               hour: '2-digit',
                               minute: '2-digit',
                             })}
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <button
+                              type="button"
+                              title={`Remove ${student.name} and their votes`}
+                              aria-label={`Remove ${student.name} and their votes`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setStudentToDelete(student);
+                              }}
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-rose-600 transition-colors hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -862,6 +910,48 @@ export function TaDashboard({ taToken, onUnauthorized, onLogout }: TaDashboardPr
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete single student confirmation */}
+      {studentToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-student-title"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-3">
+              <Trash2 className="h-5 w-5 text-rose-600" aria-hidden="true" />
+              <h3 id="delete-student-title" className="text-lg font-bold text-slate-900">
+                Remove {studentToDelete.name}?
+              </h3>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              This permanently removes this student's entry and all of their votes from the
+              current session. The voting results will update, and they can refresh and join
+              again with a new name.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                disabled={deletingStudent}
+                onClick={() => setStudentToDelete(null)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingStudent}
+                onClick={() => void handleDeleteStudent()}
+                className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+              >
+                {deletingStudent ? 'Removing...' : 'Remove Student'}
+              </button>
             </div>
           </div>
         </div>

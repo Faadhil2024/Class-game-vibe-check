@@ -388,6 +388,45 @@ export function createApiApp(): Express {
     }
   });
 
+  // TA Protected Delete Student
+  // Removes the selected student and their votes from the active session.
+  app.delete('/api/ta/students/:id', requireTaAuth, async (req, res) => {
+    try {
+      const studentId = String(req.params.id);
+
+      if (!studentId.trim()) {
+        res.status(400).json({
+          error: 'Student ID is required.',
+        });
+        return;
+      }
+
+      const store = getVibeStore();
+
+      const deleted = await store.deleteTaStudent(studentId);
+      if (!deleted) {
+        res.status(404).json({
+          error: 'Student not found in the active session.',
+        });
+        return;
+      }
+
+      res.setHeader('Cache-Control', 'no-store');
+
+      res.json({
+        ok: true,
+        deletedStudentId: studentId,
+        message: 'Student and their votes were deleted successfully.',
+      });
+    } catch (err) {
+      console.error('Error deleting TA student:', err);
+
+      res.status(500).json({
+        error: 'Unable to delete student. Please try again.',
+      });
+    }
+  });
+
   app.get('/api/ta/export.csv', requireTaAuth, async (_req, res) => {
     try {
       const store = getVibeStore();
@@ -429,6 +468,12 @@ export function createApiApp(): Express {
       console.error('Error resetting session:', err);
       res.status(500).json({ error: 'Failed to reset classroom session.' });
     }
+  });
+
+  // Keep unknown API responses machine-readable so the client can distinguish
+  // a missing endpoint from a static hosting or serverless routing problem.
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ error: 'API route not found.' });
   });
 
   return app;

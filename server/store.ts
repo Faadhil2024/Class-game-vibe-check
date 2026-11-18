@@ -108,6 +108,7 @@ export interface VibeStore {
   getPublicLiveResults(): Promise<PublicLiveResults>;
   getTaDashboardPayload(): Promise<TaDashboardPayload>;
   getTaStudentById(studentId: string): Promise<TaStudentRecord | null>;
+  deleteTaStudent(studentId: string): Promise<boolean>;
   buildCsvExport(): Promise<string>;
   startNewSession(label?: string): Promise<SessionPublicInfo>;
   resetCurrentSession(): Promise<SessionPublicInfo>;
@@ -716,7 +717,7 @@ class SupabaseVibeStore implements VibeStore {
           .order('joined_at', { ascending: false }),
         supabase
           .from('camp_answers')
-          .select('student_id, question_id, choice')
+.select('student_id, question_id, choice')
           .eq('session_id', sessionId),
       ]);
 
@@ -830,6 +831,36 @@ class SupabaseVibeStore implements VibeStore {
     }
 
     return this.toSessionPublic(inserted as CampSessionRow);
+  }
+
+  public async deleteTaStudent(studentId: string): Promise<boolean> {
+    const session = await this.getOrCreateActiveSessionRow();
+    const supabase = getSupabaseAdmin();
+    // Only delete a participant belonging to the currently active session.
+    const { data: existing, error: lookupError } = await supabase
+      .from('camp_students')
+      .select('id')
+      .eq('id', studentId)
+      .eq('session_id', session.id)
+      .maybeSingle();
+    if (lookupError) throw new Error(`Failed to find student: ${lookupError.message}`);
+    if (!existing) return false;
+
+    const { error: answersError } = await supabase
+      .from('camp_answers')
+      .delete()
+      .eq('student_id', studentId)
+      .eq('session_id', session.id);
+    if (answersError) throw new Error(`Failed to delete votes: ${answersError.message}`);
+
+    const { data: removed, error: studentError } = await supabase
+      .from('camp_students')
+      .delete()
+      .eq('id', studentId)
+      .eq('session_id', session.id)
+      .select('id');
+    if (studentError) throw new Error(`Failed to delete student: ${studentError.message}`);
+    return (removed?.length ?? 0) > 0;
   }
 
   public async resetCurrentSession(): Promise<SessionPublicInfo> {
@@ -1170,6 +1201,14 @@ class LocalJsonVibeStore implements VibeStore {
     this.db.activeSession = createFreshLocalSession(label);
     await this.persist();
     return this.getActiveSessionPublic();
+  }
+
+  public async deleteTaStudent(studentId: string): Promise<boolean> {
+    const index = this.db.activeSession.students.findIndex((student) => student.id === studentId);
+    if (index < 0) return false;
+    this.db.activeSession.students.splice(index, 1);
+    await this.persist();
+    return true;
   }
 
   public async resetCurrentSession(): Promise<SessionPublicInfo> {
