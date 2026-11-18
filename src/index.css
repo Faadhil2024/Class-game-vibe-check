@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+/* VIBE CHECK, dark stage. Neutrals are inverted, so every existing slate class
+   (including the TA dashboard) flips to dark automatically. A = vermilion, B = volt lime. */
+@theme {
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque", "Geist", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-white: #1b1b26;
+  --color-slate-50: #0b0b0f;
+  --color-slate-100: #1b1b26;
+  --color-slate-200: #323244;
+  --color-slate-300: #484860;
+  --color-slate-400: #7b798c;
+  --color-slate-500: #a6a3b5;
+  --color-slate-600: #c7c4d4;
+  --color-slate-700: #e0dde8;
+  --color-slate-800: #f0edf6;
+  --color-slate-900: #f7f5ef;
+  --color-slate-950: #ffffff;
+
+  --color-indigo-50: #fff1ea;
+  --color-indigo-100: #ffdfcf;
+  --color-indigo-200: #ffbfa0;
+  --color-indigo-300: #ff9566;
+  --color-indigo-400: #ff7a50;
+  --color-indigo-500: #ff6238;
+  --color-indigo-600: #ff4d2e;
+  --color-indigo-700: #e63c1e;
+  --color-indigo-800: #b92e16;
+  --color-indigo-900: #8a220f;
+
+  --color-teal-50: #172306;
+  --color-teal-100: #263a0c;
+  --color-teal-200: #3d5a12;
+  --color-teal-300: #5f8a18;
+  --color-teal-400: #7fae1f;
+  --color-teal-500: #9bc926;
+  --color-teal-600: #b3e12a;
+  --color-teal-700: #c6f432;
+  --color-teal-800: #dbff6b;
+  --color-teal-900: #eaff9e;
+
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  --shadow-xl: 0 2px 4px rgb(0 0 0 / 0.45), 0 32px 64px -20px rgb(0 0 0 / 0.85);
+
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --default-transition-duration: 180ms;
+  --default-transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@layer base {
+  html { font-family: var(--font-sans); background-color: #0b0b0f; color: #f7f5ef; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; color-scheme: dark; }
+  html.snap-y-prox { scroll-snap-type: y proximity; }
+  body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  h1, h2 { font-family: var(--font-display); letter-spacing: -0.035em; line-height: 0.98; text-wrap: balance; }
+  h3 { letter-spacing: -0.015em; text-wrap: balance; }
+  p { text-wrap: pretty; }
+  button, [role="button"], a { -webkit-tap-highlight-color: transparent; }
+  button:not(:disabled) { transition-property: transform, background-color, border-color, color, box-shadow, opacity; }
+  button:not(:disabled):active { transform: scale(0.97); }
+  :focus-visible { outline: 2px solid #c6f432; outline-offset: 3px; border-radius: 0.5rem; }
+  ::selection { background: #c6f432; color: #0b0b0f; }
+}
+
+/* drifting colour orbs + subtle film grain */
+body::before, body::after {
+  content: ""; position: fixed; z-index: -1; pointer-events: none; border-radius: 50%;
+  width: 70vmax; height: 70vmax; will-change: transform;
+  animation: drift 24s ease-in-out infinite alternate;
+}
+body::before { left: -20vmax; top: -25vmax; background: radial-gradient(closest-side, rgb(255 77 46 / 0.18), transparent); }
+body::after { right: -25vmax; bottom: -30vmax; background: radial-gradient(closest-side, rgb(198 244 50 / 0.1), transparent); animation-duration: 31s; animation-direction: alternate-reverse; }
+html::after {
+  content: ""; position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: 0.03; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+@keyframes drift { to { transform: translate3d(12vmax, 8vmax, 0) scale(1.15); } }
+@keyframes rise { from { opacity: 0; } to { opacity: 1; } }
+#root > * { animation: rise 320ms var(--ease-out-quint) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

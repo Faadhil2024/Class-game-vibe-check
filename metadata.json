@@ -1,0 +1,8 @@
+{
+  "name": "The Class Vibe Check",
+  "description": "Real-time interactive classroom polling game where students answer 10 fun questions and watch live class results evolve.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
